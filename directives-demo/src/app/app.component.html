@@ -1,0 +1,18 @@
+<main>
+  <app-learning-resources />
+
+  <hr />
+
+  <app-auth  />
+  <!-- @if(isAdmin()){
+    <p>Only admins should see</p>
+  } -->
+  <!-- <p *ngIf="isAdmin()">Only admins should see</p> -->
+
+  <p *appAuth="'admin'"  appLog="protected-content admin">Only admins should see</p> 
+  <p *appAuth="'user'" class="protected-content unauthenticated">
+    Regular users should see</p> 
+    <p *appAuth="'guest'" class="protected-content authenticated">
+      Guest users should see</p> 
+
+</main>
