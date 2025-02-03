@@ -1,7 +1,7 @@
 import { HttpClient, HttpErrorResponse } from "@angular/common/http";
 import { Injectable } from "@angular/core";
-import { catchError } from "rxjs/operators";
-import { BehaviorSubject, throwError } from "rxjs";
+import { catchError, tap } from "rxjs/operators";
+import { Subject, throwError } from "rxjs";
 import { User } from "./user.model";
 
  export interface AuthResponseData{
@@ -15,7 +15,7 @@ import { User } from "./user.model";
 }
 @Injectable({providedIn:'root'})
     export class AuthService {
-        user = new BehaviorSubject<User | null>(null);
+        user = new Subject<User>();
         constructor(private http: HttpClient){}
         signup (email:string, password:string){
             return this.http.post<AuthResponseData>('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=AIzaSyB49B0iHkiWxjULlEwIWG-kkEXUuSUzYTU',
@@ -24,7 +24,11 @@ import { User } from "./user.model";
                     password:password,
                     returnSecureToken: true
                 }
-            ).pipe(catchError(this.handleError)
+            )
+            .pipe(catchError(this.handleError), 
+            tap(resData => {
+               this.handleAuthentication(resData.email,resData.localId,resData.idToken,+resData.expiresIn)
+            })
         );    
          }
          login(email:String,password:string){
@@ -32,7 +36,14 @@ import { User } from "./user.model";
                 email:email,
                 password:password,
                 returnSecureToken: true 
-            }).pipe(catchError(this.handleError)
+            }).pipe(catchError(this.handleError),
+            tap(resData =>{
+                this.handleAuthentication(
+                    resData.email, 
+                    resData.localId,
+                resData.idToken,
+            +resData.expiresIn)
+            })
         );
         }
      private handleAuthentication(
@@ -41,9 +52,14 @@ import { User } from "./user.model";
         token:string,
         expiresIn:number
      ){
-        const expirationDate = new Date(new Date().getTime() + expiresIn + 1000);
-        const user = new User(email,userId, token,expirationDate);
-        this.user.next(user);
+        const expirationDate = new Date(new Date().getTime() + +expiresIn*1000);
+                const user = new User(
+                    email, 
+                    userId,
+                    token,
+                    expirationDate
+                );
+                this.user.next(user);
      }
         private handleError(errorRes: HttpErrorResponse){
             let errorMessage = 'An unknown error occurred!';
